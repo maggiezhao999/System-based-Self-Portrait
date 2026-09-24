@@ -16,8 +16,6 @@
             font-family: Arial, sans-serif;
         }
 
-        /* 整个页面 */
-
         .container {
             min-height: 100vh;
 
@@ -33,8 +31,6 @@
             box-sizing: border-box;
         }
 
-        /* 画像 */
-
         .portrait {
             position: relative;
 
@@ -44,16 +40,12 @@
             cursor: crosshair;
         }
 
-        /* 背景 */
-
         .background {
             display: block;
 
             width: 100%;
             height: auto;
         }
-
-        /* 四个图层 */
 
         .layer {
             position: absolute;
@@ -67,8 +59,6 @@
             pointer-events: none;
         }
 
-        /* Emoji 工具栏 */
-
         .toolbar {
             display: flex;
 
@@ -77,8 +67,6 @@
 
             gap: 50px;
         }
-
-        /* Emoji */
 
         .bucket {
             font-size: 50px;
@@ -94,8 +82,6 @@
             transform: scale(1.15);
         }
 
-        /* 被选中的 Emoji */
-
         .bucket.active {
             transform: scale(1.35);
         }
@@ -109,11 +95,9 @@
 
     <div class="container">
 
-        <!-- 画像 -->
-
         <div class="portrait" id="portrait">
 
-            <img src="b.png" class="background" id="background">
+            <img src="pictures/b.png" class="background" id="background">
 
             <canvas class="layer" id="l1"></canvas>
 
@@ -125,8 +109,6 @@
 
         </div>
 
-
-        <!-- Emoji 工具栏 -->
 
         <div class="toolbar">
 
@@ -145,10 +127,6 @@
 
     <script>
 
-        // =========================
-        // 1. 基础设置
-        // =========================
-
         let portrait = document.getElementById("portrait");
 
         let background = document.getElementById("background");
@@ -162,10 +140,6 @@
         let emojiSize = 55;
         let emojiGap = 65;
 
-
-        // =========================
-        // 2. 加载图片
-        // =========================
 
         background.onload = () => {
 
@@ -205,7 +179,7 @@
 
                 };
 
-                img.src = "l" + i + ".png";
+                img.src = "pictures/l" + i + ".png";
 
             }
 
@@ -217,23 +191,15 @@
         }
 
 
-        // =========================
-        // 3. 选择 Emoji
-        // =========================
-
         for (let bucket of buckets) {
 
             bucket.addEventListener("click", () => {
 
                 let emoji = bucket.dataset.emoji;
 
-                // 再次点击同一个 Emoji 就取消选择
-
                 selectedEmoji =
                     selectedEmoji === emoji ? null : emoji;
 
-
-                // 更新选中状态
 
                 for (let b of buckets) {
 
@@ -249,10 +215,6 @@
         }
 
 
-        // =========================
-        // 4. 点击画像填色
-        // =========================
-
         portrait.addEventListener("click", (event) => {
 
             if (!selectedEmoji) return;
@@ -264,8 +226,6 @@
 
             let y = (event.clientY - rect.top) / rect.height;
 
-
-            // 从最上面的图层开始检查
 
             for (let i = layers.length - 1; i >= 0; i--) {
 
@@ -283,8 +243,6 @@
                 ) * 4;
 
 
-                // 点击原图有颜色的部分
-
                 if (layer.mask.data[index + 3] > 20) {
 
                     fillLayer(layer, selectedEmoji);
@@ -298,10 +256,6 @@
         });
 
 
-        // =========================
-        // 5. Emoji 填色
-        // =========================
-
         function fillLayer(layer, emoji) {
 
             let canvas = layer.canvas;
@@ -313,8 +267,6 @@
             let height = canvas.height;
 
 
-            // 临时 Canvas
-
             let temp = document.createElement("canvas");
 
             temp.width = width;
@@ -323,15 +275,11 @@
             let t = temp.getContext("2d");
 
 
-            // Emoji 设置
-
             t.font = emojiSize + "px Arial";
 
             t.textAlign = "center";
             t.textBaseline = "middle";
 
-
-            // 铺满 Emoji
 
             for (let y = emojiGap / 2; y < height; y += emojiGap) {
 
@@ -344,19 +292,13 @@
             }
 
 
-            // 获取 Emoji 像素
-
             let data = t.getImageData(
                 0, 0, width, height
             );
 
 
-            // 原始 PNG 的透明度
-
             let mask = layer.mask.data;
 
-
-            // 只保留原图有颜色的区域
 
             for (let i = 0; i < data.data.length; i += 4) {
 
@@ -378,19 +320,11 @@
             }
 
 
-            // 替换图层
-
             ctx.clearRect(0, 0, width, height);
 
             ctx.putImageData(data, 0, 0);
 
         }
-
-    </script>
-
-</body>
-
-</html>
 
     </script>
 

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Self as System</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            background-color: black;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 整个页面 */
+
+        .container {
+            min-height: 100vh;
+
+            display: flex;
+            flex-direction: column;
+
+            justify-content: center;
+            align-items: center;
+
+            gap: 35px;
+
+            padding: 30px 0;
+            box-sizing: border-box;
+        }
+
+        /* 画像 */
+
+        .portrait {
+            position: relative;
+
+            width: 800px;
+            max-width: 90vw;
+
+            cursor: crosshair;
+        }
+
+        /* 背景 */
+
+        .background {
+            display: block;
+
+            width: 100%;
+            height: auto;
+        }
+
+        /* 四个图层 */
+
+        .layer {
+            position: absolute;
+
+            top: 0;
+            left: 0;
+
+            width: 100%;
+            height: 100%;
+
+            pointer-events: none;
+        }
+
+        /* Emoji 工具栏 */
+
+        .toolbar {
+            display: flex;
+
+            justify-content: center;
+            align-items: center;
+
+            gap: 50px;
+        }
+
+        /* Emoji */
+
+        .bucket {
+            font-size: 50px;
+
+            cursor: pointer;
+
+            user-select: none;
+
+            transition: transform 0.2s;
+        }
+
+        .bucket:hover {
+            transform: scale(1.15);
+        }
+
+        /* 被选中的 Emoji */
+
+        .bucket.active {
+            transform: scale(1.35);
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+    <div class="container">
+
+        <!-- 画像 -->
+
+        <div class="portrait" id="portrait">
+
+            <img src="b.png" class="background" id="background">
+
+            <canvas class="layer" id="l1"></canvas>
+
+            <canvas class="layer" id="l2"></canvas>
+
+            <canvas class="layer" id="l3"></canvas>
+
+            <canvas class="layer" id="l4"></canvas>
+
+        </div>
+
+
+        <!-- Emoji 工具栏 -->
+
+        <div class="toolbar">
+
+            <div class="bucket" data-emoji="✈️">✈️</div>
+
+            <div class="bucket" data-emoji="🏠">🏠</div>
+
+            <div class="bucket" data-emoji="🎓">🎓</div>
+
+            <div class="bucket" data-emoji="🎸">🎸</div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        // =========================
+        // 1. 基础设置
+        // =========================
+
+        let portrait = document.getElementById("portrait");
+
+        let background = document.getElementById("background");
+
+        let buckets = document.querySelectorAll(".bucket");
+
+        let layers = [];
+
+        let selectedEmoji = null;
+
+        let emojiSize = 55;
+        let emojiGap = 65;
+
+
+        // =========================
+        // 2. 加载图片
+        // =========================
+
+        background.onload = () => {
+
+            let width = background.naturalWidth;
+            let height = background.naturalHeight;
+
+            portrait.style.aspectRatio = width + " / " + height;
+
+
+            for (let i = 1; i <= 4; i++) {
+
+                let canvas = document.getElementById("l" + i);
+
+                let ctx = canvas.getContext("2d");
+
+                let img = new Image();
+
+                let layer = {
+                    canvas: canvas,
+                    ctx: ctx,
+                    mask: null
+                };
+
+                layers.push(layer);
+
+
+                img.onload = () => {
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    layer.mask = ctx.getImageData(
+                        0, 0, width, height
+                    );
+
+                };
+
+                img.src = "l" + i + ".png";
+
+            }
+
+        };
+
+
+        if (background.complete && background.naturalWidth > 0) {
+            background.onload();
+        }
+
+
+        // =========================
+        // 3. 选择 Emoji
+        // =========================
+
+        for (let bucket of buckets) {
+
+            bucket.addEventListener("click", () => {
+
+                let emoji = bucket.dataset.emoji;
+
+                // 再次点击同一个 Emoji 就取消选择
+
+                selectedEmoji =
+                    selectedEmoji === emoji ? null : emoji;
+
+
+                // 更新选中状态
+
+                for (let b of buckets) {
+
+                    b.classList.toggle(
+                        "active",
+                        b.dataset.emoji === selectedEmoji
+                    );
+
+                }
+
+            });
+
+        }
+
+
+        // =========================
+        // 4. 点击画像填色
+        // =========================
+
+        portrait.addEventListener("click", (event) => {
+
+            if (!selectedEmoji) return;
+
+
+            let rect = portrait.getBoundingClientRect();
+
+            let x = (event.clientX - rect.left) / rect.width;
+
+            let y = (event.clientY - rect.top) / rect.height;
+
+
+            // 从最上面的图层开始检查
+
+            for (let i = layers.length - 1; i >= 0; i--) {
+
+                let layer = layers[i];
+
+                if (!layer.mask) continue;
+
+
+                let px = Math.floor(x * layer.canvas.width);
+
+                let py = Math.floor(y * layer.canvas.height);
+
+                let index = (
+                    py * layer.canvas.width + px
+                ) * 4;
+
+
+                // 点击原图有颜色的部分
+
+                if (layer.mask.data[index + 3] > 20) {
+
+                    fillLayer(layer, selectedEmoji);
+
+                    break;
+
+                }
+
+            }
+
+        });
+
+
+        // =========================
+        // 5. Emoji 填色
+        // =========================
+
+        function fillLayer(layer, emoji) {
+
+            let canvas = layer.canvas;
+
+            let ctx = layer.ctx;
+
+            let width = canvas.width;
+
+            let height = canvas.height;
+
+
+            // 临时 Canvas
+
+            let temp = document.createElement("canvas");
+
+            temp.width = width;
+            temp.height = height;
+
+            let t = temp.getContext("2d");
+
+
+            // Emoji 设置
+
+            t.font = emojiSize + "px Arial";
+
+            t.textAlign = "center";
+            t.textBaseline = "middle";
+
+
+            // 铺满 Emoji
+
+            for (let y = emojiGap / 2; y < height; y += emojiGap) {
+
+                for (let x = emojiGap / 2; x < width; x += emojiGap) {
+
+                    t.fillText(emoji, x, y);
+
+                }
+
+            }
+
+
+            // 获取 Emoji 像素
+
+            let data = t.getImageData(
+                0, 0, width, height
+            );
+
+
+            // 原始 PNG 的透明度
+
+            let mask = layer.mask.data;
+
+
+            // 只保留原图有颜色的区域
+
+            for (let i = 0; i < data.data.length; i += 4) {
+
+                let alpha = mask[i + 3];
+
+                if (alpha <= 20) {
+
+                    data.data[i + 3] = 0;
+
+                } else {
+
+                    data.data[i + 3] =
+                        Math.round(
+                            data.data[i + 3] * alpha / 255
+                        );
+
+                }
+
+            }
+
+
+            // 替换图层
+
+            ctx.clearRect(0, 0, width, height);
+
+            ctx.putImageData(data, 0, 0);
+
+        }
+
+    </script>
+
+</body>
+
+</html>
+
+    </script>
+
+</body>
+
+</html>
